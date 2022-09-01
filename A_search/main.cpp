@@ -1,6 +1,9 @@
 #include "main.h"
 
-enum class State {kEmpty, kObstacle, kClosed, kPath};
+enum class State {kEmpty, kObstacle, kClosed, kPath, kStart, kFinish};
+
+// directional deltas
+const int delta[4][2]{{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
 
 
 vector<State> ParseLine(string line) {
@@ -53,6 +56,32 @@ int Heuristic(int x1, int y1, int x2, int y2)
 {
     return (abs(x2-x1)+ abs(y2-y1));
 }
+// TODO: Write CheckValidCell here. Check that the 
+// cell is on the grid and not an obstacle (i.e. equals kEmpty)
+bool CheckValidCell(int x, int y, vector<vector<State>>grid)
+{
+  
+  if (grid.empty())
+  {
+    cout << " CheckValidCell(): Error, received empty Grid";
+    return false;
+  }
+  // check range
+  if ( x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size())
+  {
+    return false;
+  } 
+
+  // Check that cell is not closed and not an obstacle grid status
+  if (grid[x][y] == State::kEmpty)
+  {
+    return true;
+  }
+
+  return false;
+    
+}
+
 
 // TODO: Write the AddToOpen function here.
 void AddToOpen(int x, int y, int g, int h, vector<vector<int>> &open_nodes, vector<vector<State>> &grid)
@@ -60,11 +89,36 @@ void AddToOpen(int x, int y, int g, int h, vector<vector<int>> &open_nodes, vect
     open_nodes.push_back(vector<int>{x, y, g, h});
 
     // close the cell in the grid.
-    if (x >= 0 && x < grid[0].size() && y >= 0 && y < grid.size())
+    if (x >= 0 && x < grid.size() && y >= 0 && y < grid[0].size())
         grid[x][y] = State::kClosed;
     else
-        cout << "AddToOpen: Error, Illegal [x,y] vals["<< x << "," << y << "] Not on Grid" << std::endl;
+        cout << "AddToOpen: Error, Illegal point["<< x << "," << y << "] Not on Grid" << std::endl;
 }
+
+/** 
+ * Expand current nodes's neighbors and add them to the open list.
+ */
+void ExpandNeighbors(vector<int> current, int goal[2], vector<vector<int>> &open, vector<vector<State>> &grid) {
+
+  // TODO: Get current node's data.
+  int x_curr = current[0];
+  int y_curr = current[1];
+  int g_curr = current[2];
+
+  // TODO: Loop through current node's potential neighbors.
+  for (auto del: delta)
+  {
+    if (CheckValidCell(x_curr + del[0], y_curr + del[1], grid))
+    {
+      int h_val = Heuristic(x_curr + del[0], y_curr + del[1], goal[0], goal[1]);
+      AddToOpen(x_curr + del[0], y_curr + del[1], g_curr + 1, h_val, open, grid);
+    }
+      
+  }
+    
+}
+
+
 
 // TODO: Write the Search function stub here.
 std::vector<vector<State>> Search(vector<vector<State>> grid, int start[2], int goal[2] )
@@ -77,6 +131,10 @@ std::vector<vector<State>> Search(vector<vector<State>> grid, int start[2], int 
 
     // Add the the node to the open list
     AddToOpen(node[0], node[1], node[2], node[3], open, grid);
+
+    grid[start[0]][start[1]] = State::kStart;
+
+
 
     // TODO: while open vector is non empty {
     while (!open.empty())
@@ -94,22 +152,24 @@ std::vector<vector<State>> Search(vector<vector<State>> grid, int start[2], int 
 
         // TODO: Check if you've reached the goal. If so, return grid.
         if(current[0] == goal[0] && current[1] == goal[1])
+        {
+            grid[goal[0]][goal[1]] = State::kFinish;
             return grid;
 
+        }
+            
 
         // If we're not done, expand search to current node's neighbors. This step will be completed in a later quiz.
-        // ExpandNeighbors
-
-
+        ExpandNeighbors(current, goal, open, grid);
 
 
     } // TODO: End while loop
     
 
         
+    // Failed to find a path, return an empty grid;
     cout << "Path not found" << std::endl;
     vector<vector<State>> solution;
-
     return solution;
 
 }
@@ -117,9 +177,11 @@ std::vector<vector<State>> Search(vector<vector<State>> grid, int start[2], int 
 
 string CellString(State cell) {
   switch(cell) {
-    case State::kObstacle: return "⛰️   ";
+    case State::kObstacle: return "⛰️    ";
     case State::kPath: return "🚗   ";
-    default: return "0   "; 
+    case State::kStart: return"🚦   ";
+    case State::kFinish: return "🏁   ";
+    default: return "0    "; 
   }
 }
 
@@ -145,8 +207,11 @@ int main() {
     // TODO: Change the following line to pass "solution" to PrintBoard.
     PrintBoard(solution);
    // Tests
-    TestHeuristic();
-    TestAddToOpen();
-    TestCompare();
-    TestSearch();
+    // TestHeuristic();
+    // TestAddToOpen();
+    // TestCompare();
+    // TestSearch();
+    // TestCheckValidCell();
+    // TestExpandNeighbors();
+
 }
